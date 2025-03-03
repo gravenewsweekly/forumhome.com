@@ -3,25 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feedback Forum</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Feedback</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <nav>
         <ul>
             <li><a href="index.html">Home</a></li>
             <li><a href="feedback.html">Feedback</a></li>
+            <li><a href="general.html">General</a></li>
+            <li><a href="offtopic.html">Offtopic</a></li>
         </ul>
     </nav>
 
-    <h1>Feedback Forum</h1>
-    <div id="messages-container"></div>
+    <div class="form-container">
+        <h2>Give Your Feedback</h2>
+        <input type="text" id="userName" placeholder="Your Name">
+        <input type="text" id="postTitle" placeholder="Title of Feedback">
+        <textarea id="messageText" placeholder="Your Feedback"></textarea>
+        <button onclick="postMessage('feedback')">Post Feedback</button>
+    </div>
 
-    <h3>Post a Message</h3>
-    <input type="text" id="userName" placeholder="Your Name" required>
-    <textarea id="messageText" placeholder="Write your message..."></textarea>
-    <button onclick="postMessage('feedback')">Post</button>
+    <div id="messages-container">
+        <h2>Feedbacks</h2>
+    </div>
 
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
