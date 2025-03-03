@@ -1,73 +1,66 @@
-// Firebase Configuration (Replace with your Firebase Project Config)
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+// Firebase Configuration (Your Credentials)
 const firebaseConfig = {
-    apiKey: "YOUR-API-KEY",
-    authDomain: "YOUR-DOMAIN.firebaseapp.com",
-    projectId: "YOUR-PROJECT-ID",
-    storageBucket: "YOUR-BUCKET.appspot.com",
-    messagingSenderId: "YOUR-SENDER-ID",
-    appId: "YOUR-APP-ID"
+    apiKey: "AIzaSyDJ3YeFV0W-UFt-WKD_8lh0RliEQE3lgpw",
+    authDomain: "forumhome-c9e0a.firebaseapp.com",
+    projectId: "forumhome-c9e0a",
+    storageBucket: "forumhome-c9e0a.appspot.com",
+    messagingSenderId: "492916848174",
+    appId: "1:492916848174:web:b2d81dfeb3372ae61f11bf",
+    measurementId: "G-08J3516M5L"
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// Fetch and Display Posts
-function loadPosts() {
-    db.collection("posts").get().then((querySnapshot) => {
-        let container = document.getElementById("posts-container");
-        container.innerHTML = "";
-        querySnapshot.forEach((doc) => {
-            let post = doc.data();
-            container.innerHTML += `<div><h2><a href="post.html?id=${doc.id}">${post.title}</a></h2></div>`;
-        });
-    });
-}
+// Function to Post a Message
+function postMessage(category) {
+    let userName = document.getElementById("userName").value;
+    let messageText = document.getElementById("messageText").value;
 
-// Submit New Post
-function submitPost() {
-    let title = document.getElementById("postTitle").value;
-    let content = document.getElementById("postContent").value;
+    if (!userName || !messageText) {
+        alert("Please enter your name and message before posting!");
+        return;
+    }
 
-    db.collection("posts").add({ title: title, content: content }).then(() => {
-        alert("Post Created!");
-        window.location.href = "index.html";
-    });
-}
-
-// Load Post Details & Replies
-function loadPost() {
-    let params = new URLSearchParams(window.location.search);
-    let postId = params.get("id");
-
-    db.collection("posts").doc(postId).get().then((doc) => {
-        let post = doc.data();
-        document.getElementById("post-content").innerHTML = `<h1>${post.title}</h1><p>${post.content}</p>`;
-    });
-
-    // Load Replies
-    db.collection("posts").doc(postId).collection("replies").get().then((querySnapshot) => {
-        let container = document.getElementById("replies-container");
-        querySnapshot.forEach((doc) => {
-            let reply = doc.data();
-            container.innerHTML += `<p>${reply.text}</p>`;
-        });
-    });
-}
-
-// Submit Reply
-function submitReply() {
-    let replyText = document.getElementById("replyText").value;
-    let params = new URLSearchParams(window.location.search);
-    let postId = params.get("id");
-
-    db.collection("posts").doc(postId).collection("replies").add({ text: replyText }).then(() => {
-        alert("Reply Submitted!");
+    addDoc(collection(db, category), {
+        name: userName,
+        message: messageText,
+        timestamp: new Date()
+    }).then(() => {
+        alert("Message Posted!");
         location.reload();
+    }).catch(error => {
+        console.error("Error posting message:", error);
     });
 }
 
-// Load Posts on Home Page
-if (window.location.pathname.includes("index.html")) {
-    loadPosts();
+// Function to Load Messages for a Category
+function loadMessages(category) {
+    let container = document.getElementById("messages-container");
+    const q = query(collection(db, category), orderBy("timestamp", "desc"));
+
+    onSnapshot(q, (snapshot) => {
+        container.innerHTML = "";
+        snapshot.forEach((doc) => {
+            let data = doc.data();
+            container.innerHTML += `<p><strong>${data.name}:</strong> ${data.message}</p>`;
+        });
+    });
 }
+
+// Automatically Load Messages for the Current Page
+if (window.location.pathname.includes("feedback.html")) {
+    loadMessages("feedback");
+} else if (window.location.pathname.includes("general.html")) {
+    loadMessages("general");
+} else if (window.location.pathname.includes("offtopic.html")) {
+    loadMessages("offtopic");
+}
+
+// Make Functions Accessible in HTML
+window.postMessage = postMessage;
