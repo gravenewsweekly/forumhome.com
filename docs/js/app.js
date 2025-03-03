@@ -1,6 +1,11 @@
-// Import Firebase modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+import { 
+    initializeApp 
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+
+import { 
+    getFirestore, collection, addDoc, onSnapshot, 
+    orderBy, query, doc, updateDoc, deleteDoc, getDoc 
+} from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -17,30 +22,78 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Get User IP
+async function getUserIP() {
+    let response = await fetch("https://api64.ipify.org?format=json");
+    let data = await response.json();
+    return data.ip;
+}
+
 // Function to Post a Message
 async function postMessage(category) {
-    let userName = document.getElementById("userName").value.trim();
-    let messageText = document.getElementById("messageText").value.trim();
+    let userName = document.getElementById("userName").value;
+    let postTitle = document.getElementById("postTitle").value;
+    let messageText = document.getElementById("messageText").value;
+    let userIP = await getUserIP();
 
-    if (!userName || !messageText) {
-        alert("Please enter your name and message before posting!");
+    if (!userName || !postTitle || !messageText) {
+        alert("Please enter all fields!");
         return;
     }
 
-    try {
-        await addDoc(collection(db, category), {
-            name: userName,
-            message: messageText,
-            timestamp: serverTimestamp()
-        });
-
-        // Clear input fields instead of reloading the page
-        document.getElementById("userName").value = "";
-        document.getElementById("messageText").value = "";
-    } catch (error) {
+    addDoc(collection(db, category), {
+        name: userName,
+        title: postTitle,
+        message: messageText,
+        timestamp: new Date(),
+        likes: 0,
+        dislikes: 0,
+        userIP: userIP
+    }).then(() => {
+        alert("Message Posted!");
+        location.reload();
+    }).catch(error => {
         console.error("Error posting message:", error);
-        alert("Failed to post message. Check console for details.");
+    });
+}
+
+// Function to React to a Post
+async function reactToPost(category, docId, reaction) {
+    let userIP = await getUserIP();
+    let postRef = doc(db, category, docId);
+    let post = await getDoc(postRef);
+
+    if (!post.exists()) return;
+    let postData = post.data();
+
+    if (postData.userIP === userIP) {
+        alert("You can only react once per post!");
+        return;
     }
+
+    let updateData = {};
+    if (reaction === "like") updateData.likes = postData.likes + 1;
+    if (reaction === "dislike") updateData.dislikes = postData.dislikes + 1;
+
+    await updateDoc(postRef, updateData);
+}
+
+// Function to Delete Post
+async function deletePost(category, docId) {
+    let userIP = await getUserIP();
+    let postRef = doc(db, category, docId);
+    let post = await getDoc(postRef);
+
+    if (!post.exists()) return;
+    let postData = post.data();
+
+    if (postData.userIP !== userIP) {
+        alert("You can only delete your own post!");
+        return;
+    }
+
+    await deleteDoc(postRef);
+    alert("Post deleted!");
 }
 
 // Function to Load Messages
@@ -52,20 +105,29 @@ function loadMessages(category) {
         container.innerHTML = "";
         snapshot.forEach((doc) => {
             let data = doc.data();
-            container.innerHTML += `<p><strong>${data.name}:</strong> ${data.message}</p>`;
+            container.innerHTML += `
+                <div class="post">
+                    <h3>${data.title}</h3>
+                    <p><strong>${data.name}:</strong> ${data.message}</p>
+                    <button onclick="reactToPost('${category}', '${doc.id}', 'like')">👍 ${data.likes}</button>
+                    <button onclick="reactToPost('${category}', '${doc.id}', 'dislike')">👎 ${data.dislikes}</button>
+                    <button onclick="deletePost('${category}', '${doc.id}')">🗑 Delete</button>
+                </div>
+            `;
         });
     });
 }
 
-// Automatically Load Messages for the Current Page
-const page = window.location.pathname;
-if (page.includes("feedback.html")) {
+// Load Messages Based on Page
+if (window.location.pathname.includes("feedback.html")) {
     loadMessages("feedback");
-} else if (page.includes("general.html")) {
+} else if (window.location.pathname.includes("general.html")) {
     loadMessages("general");
-} else if (page.includes("offtopic.html")) {
+} else if (window.location.pathname.includes("offtopic.html")) {
     loadMessages("offtopic");
 }
 
-// Make Function Accessible in HTML
+// Make Functions Accessible in HTML
 window.postMessage = postMessage;
+window.reactToPost = reactToPost;
+window.deletePost = deletePost;
